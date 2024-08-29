@@ -18,6 +18,8 @@ class Quiz(models.Model):
     quiz_desc = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    assigned_users = models.ManyToManyField(
+        User, related_name='assigned_quiz', blank=True)
 
     def __str__(self):
         return self.quiz_title
@@ -40,3 +42,16 @@ class Option(models.Model):
 
     def __str__(self):
         return self.option_text
+
+
+class UserQuizResult(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE)
+    score = models.FloatField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'quiz')
+
+    def __str__(self):
+        return f"{self.user} - {self.quiz} - Score: {self.score}"

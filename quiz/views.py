@@ -7,6 +7,9 @@ from rest_framework.exceptions import PermissionDenied
 from .models import Quotes
 from .serializer import QuotesSerializer, QuizSerializer
 from .models import *
+from django.shortcuts import get_object_or_404
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 
 
 class QuotesView(APIView):
@@ -74,3 +77,81 @@ class QuizCreateView(APIView):
 
             serializer = QuizSerializer(quiz)
             return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def QuizAssignView(request):
+    user_id = request.data.get('user_id')
+    quiz_id = request.data.get('quiz_id')
+
+    if not user_id or not quiz_id:
+        return Response({"error": "Both 'user_id' and 'quiz_id' are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = get_object_or_404(User, id=user_id)
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+
+    if user in quiz.assigned_users.all():
+        return Response({"error": "User is already assigned to this quiz."}, status=status.HTTP_400_BAD_REQUEST)
+
+    quiz.assigned_users.add(user)
+    quiz.save()
+
+    return Response({"success": "User assigned to quiz successfully."}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def UserAssignedQuizzesView(request):
+    user = request.user
+    quizzes = Quiz.objects.filter(assigned_users=user)
+    if not quizzes.exists():
+        return Response({"message": "No quizzes assigned to you."}, status=status.HTTP_404_NOT_FOUND)
+
+    quiz_data = [
+        {
+            "quiz_id": quiz.id,
+            "quiz_title": quiz.quiz_title,
+            "quiz_desc": quiz.quiz_desc
+        }
+        for quiz in quizzes
+    ]
+    return Response({"quizzes": quiz_data}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def QuizDetailView(request, quiz_id):
+    user = request.user
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+    if user not in quiz.assigned_users.all():
+        return Response({"error": "You do not have permission to access this quiz."}, status=status.HTTP_403_FORBIDDEN)
+    serializer = QuizSerializer(quiz)
+    return Response({"quiz": serializer.data}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def SubmitQuizResultView(request):
+    user = request.user
+    quiz_id = request.data.get('quiz_id')
+    score = request.data.get('score')
+
+    if not quiz_id or score is None:
+        return Response({"error": "Both 'quiz_id' and 'score' are required."}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        score = float(score)
+    except ValueError:
+        return Response({"error": "Score must be a numeric value."}, status=status.HTTP_400_BAD_REQUEST)
+
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+    if user not in quiz.assigned_users.all():
+        return Response({"error": "You do not have permission to submit results for this quiz."}, status=status.HTTP_403_FORBIDDEN)
+
+    result, created = UserQuizResult.objects.update_or_create(
+        user=user,
+        quiz=quiz,
+        defaults={'score': score}
+    )
+
+    return Response({"success": "Quiz result submitted successfully.", "score": result.score}, status=status.HTTP_201_CREATED)
