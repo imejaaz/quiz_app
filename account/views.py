@@ -1,3 +1,6 @@
+from django.core.exceptions import ValidationError
+from django.contrib.auth import update_session_auth_hash
+from rest_framework.decorators import api_view, permission_classes
 from django.contrib.auth.models import User
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -86,3 +89,34 @@ class UserView(APIView):
         ]
 
         return Response({"users": user_data}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def UpdateProfileView(request):
+    user = request.user
+    first_name = request.data.get('first_name')
+    last_name = request.data.get('last_name')
+    country = request.data.get('country')
+    old_password = request.data.get('old_password')
+    new_password = request.data.get('new_password')
+
+    if first_name is not None:
+        user.first_name = first_name
+    if last_name is not None:
+        user.last_name = last_name
+    if country is not None:
+        user.profile.country = country
+        user.profile.save()
+
+    if old_password and new_password:
+        if not user.check_password(old_password):
+            return Response({"error": "Old password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
+        if len(new_password) < 8:
+            return Response({"error": "New password must be at least 8 characters long."}, status=status.HTTP_400_BAD_REQUEST)
+        user.set_password(new_password)
+        update_session_auth_hash(request, user)
+
+    user.save()
+
+    return Response({"success": "Profile updated successfully."}, status=status.HTTP_200_OK)
