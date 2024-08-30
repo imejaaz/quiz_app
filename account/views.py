@@ -12,7 +12,11 @@ from rest_framework.exceptions import PermissionDenied
 
 
 class SignUpView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
+        if not request.user.is_superuser and not request.user.is_staff:
+            return Response({"error": "You have not permissions to access it."}, status=status.HTTP_400_BAD_REQUEST)
         f_name = request.data.get('first_name')
         l_name = request.data.get('last_name')
         email = request.data.get('email')
@@ -41,6 +45,7 @@ class SignUpView(APIView):
 
 
 class UserView(APIView):
+    # sign in
     def post(self, request):
         email = request.data.get('email')
         password = request.data.get('password')
@@ -72,7 +77,7 @@ class UserView(APIView):
 
         if not request.user.is_authenticated:
             raise PermissionDenied(
-                "You do not have permission to access this resource.")
+                "You are not authenticated.")
 
         if not request.user.is_staff:
             return Response({"error": "You do not have permission to access this resource."}, status=status.HTTP_403_FORBIDDEN)
