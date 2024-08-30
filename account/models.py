@@ -9,6 +9,8 @@ class Profile(models.Model):
     country = models.CharField(max_length=100, blank=True, null=True)
     user_rid = models.CharField(
         max_length=5, unique=True, default=generate_random_id)
+    created_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.DO_NOTHING, related_name='users')
 
     def __str__(self):
         return f"{self.user.username}'s Profile"

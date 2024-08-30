@@ -39,6 +39,10 @@ class SignUpView(APIView):
             user.is_staff = True
         user.save()
 
+        profile = user.profile
+        profile.created_by = request.user
+        profile.save()
+
         return Response({
             "success": "User created successfully.",
         }, status=status.HTTP_201_CREATED)

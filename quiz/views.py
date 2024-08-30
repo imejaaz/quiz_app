@@ -7,9 +7,12 @@ from rest_framework.exceptions import PermissionDenied
 from .models import Quotes
 from .serializer import QuotesSerializer, QuizSerializer
 from .models import *
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+import random
+from account.models import Profile
 
 
 class QuotesView(APIView):
@@ -185,3 +188,24 @@ def SubmitQuizResultView(request):
     )
 
     return Response({"success": "Quiz result submitted successfully.", "score": result.score}, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def random_quote(request):
+    profile = get_object_or_404(Profile, user=request.user)
+    admin_user = profile.created_by
+
+    if admin_user is None:
+        return JsonResponse({"error": "Admin user not found."}, status=404)
+    all_quotes = Quotes.objects.filter(created_by=admin_user)
+    if not all_quotes.exists():
+        return JsonResponse({"error": "No quotes available from the admin."}, status=404)
+    quote = random.choice(all_quotes)
+    quote_data = {
+        "id": quote.qoute_id,
+        "quote_title": quote.quote_title,
+        "quote_desc": quote.qoute_desc,
+        "created_by": quote.created_by.username
+    }
+    return JsonResponse({"quote": quote_data})

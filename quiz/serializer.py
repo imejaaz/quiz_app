@@ -14,6 +14,9 @@ class OptionSerializer(serializers.ModelSerializer):
         model = Option
         fields = ['id', 'option_text', 'is_correct']
 
+    def create(self, validated_data):
+        return Option.objects.create(**validated_data)
+
     def update(self, instance, validated_data):
         instance.option_text = validated_data.get(
             'option_text', instance.option_text)
@@ -36,15 +39,24 @@ class QuestionSerializer(serializers.ModelSerializer):
                 "Each question must have exactly 4 options.")
         return value
 
+    def create(self, validated_data):
+        options_data = validated_data.pop('options')
+        question = Question.objects.create(**validated_data)
+        for option_data in options_data:
+            Option.objects.create(question=question, **option_data)
+        return question
+
     def update(self, instance, validated_data):
         instance.question = validated_data.get('question', instance.question)
         instance.save()
 
         options_data = validated_data.get('options', [])
-        # First, update existing options or create new ones
+        existing_option_ids = [option.id for option in instance.options.all()]
+
+        # Update existing options or create new ones
         for option_data in options_data:
             option_id = option_data.get('id')
-            if option_id:
+            if option_id in existing_option_ids:
                 option = Option.objects.get(id=option_id, question=instance)
                 option.option_text = option_data.get(
                     'option_text', option.option_text)
@@ -53,6 +65,12 @@ class QuestionSerializer(serializers.ModelSerializer):
                 option.save()
             else:
                 Option.objects.create(question=instance, **option_data)
+
+        # Remove options that were not included in the update request
+        for option_id in existing_option_ids:
+            if option_id not in [data.get('id') for data in options_data]:
+                Option.objects.get(id=option_id, question=instance).delete()
+
         return instance
 
 
@@ -69,6 +87,16 @@ class QuizSerializer(serializers.ModelSerializer):
                 "A quiz must have between 1 to 4 questions.")
         return value
 
+    def create(self, validated_data):
+        questions_data = validated_data.pop('questions')
+        quiz = Quiz.objects.create(**validated_data)
+        for question_data in questions_data:
+            options_data = question_data.pop('options')
+            question = Question.objects.create(quiz=quiz, **question_data)
+            for option_data in options_data:
+                Option.objects.create(question=question, **option_data)
+        return quiz
+
     def update(self, instance, validated_data):
         instance.quiz_title = validated_data.get(
             'quiz_title', instance.quiz_title)
@@ -80,12 +108,11 @@ class QuizSerializer(serializers.ModelSerializer):
         existing_question_ids = [
             question.id for question in instance.questions.all()]
 
-        # Update existing questions
+        # Update existing questions or create new ones
         for question_data in questions_data:
             question_id = question_data.get('id')
             if question_id in existing_question_ids:
                 question = Question.objects.get(id=question_id, quiz=instance)
-                question_data.pop('options', None)  # Don't update options here
                 question_serializer = QuestionSerializer(
                     question, data=question_data, partial=True)
                 if question_serializer.is_valid():
@@ -94,7 +121,7 @@ class QuizSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError(
                         question_serializer.errors)
             else:
-                options_data = question_data.pop('options', [])
+                options_data = question_data.pop('options')
                 question = Question.objects.create(
                     quiz=instance, **question_data)
                 for option_data in options_data:
