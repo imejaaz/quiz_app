@@ -4,7 +4,7 @@ from .utility import generate_random_id
 
 
 class Quotes(models.Model):
-    quote_title = models.CharField(max_length=50)
+    quote_title = models.CharField(max_length=50, null=True, blank=True)
     qoute_desc = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -14,6 +14,15 @@ class Quotes(models.Model):
 
     def __str__(self) -> str:
         return self.quote_title
+
+    def save(self, *args, **kwargs):
+        if not self.qoute_id or Quotes.objects.filter(qoute_id=self.qoute_id).exists():
+            self.qoute_id = generate_random_id().lower()
+
+            while Quotes.objects.filter(qoute_id=self.qoute_id).exists():
+                self.qoute_id = generate_random_id().lower()
+
+        super().save(*args, **kwargs)
 
 
 class Quiz(models.Model):
@@ -28,6 +37,15 @@ class Quiz(models.Model):
 
     def __str__(self):
         return self.quiz_title
+
+    def save(self, *args, **kwargs):
+        if not self.quiz_id or Quiz.objects.filter(quiz_id=self.quiz_id).exists():
+            self.quiz_id = generate_random_id().lower()
+
+            while Quiz.objects.filter(quiz_id=self.quiz_id).exists():
+                self.quiz_id = generate_random_id().lower()
+
+        super().save(*args, **kwargs)
 
 
 class Question(models.Model):

@@ -14,3 +14,12 @@ class Profile(models.Model):
 
     def __str__(self):
         return f"{self.user.username}'s Profile"
+
+    def save(self, *args, **kwargs):
+        if not self.user_rid or Profile.objects.filter(user_rid=self.user_rid).exists():
+            self.user_rid = generate_random_id().lower()
+
+            while Profile.objects.filter(user_rid=self.user_rid).exists():
+                self.user_rid = generate_random_id().lower()
+
+        super().save(*args, **kwargs)
