@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from .utility import generate_random_id
 
 
 class Quotes(models.Model):
@@ -8,6 +9,8 @@ class Quotes(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    qoute_id = models.CharField(
+        max_length=5, unique=True, default=generate_random_id)
 
     def __str__(self) -> str:
         return self.quote_title
@@ -20,6 +23,8 @@ class Quiz(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     assigned_users = models.ManyToManyField(
         User, related_name='assigned_quiz', blank=True)
+    quiz_id = models.CharField(
+        max_length=5, unique=True, default=generate_random_id)
 
     def __str__(self):
         return self.quiz_title

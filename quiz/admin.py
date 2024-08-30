@@ -1,12 +1,17 @@
 from django.contrib import admin
-from .models import Quiz, Question, Option, UserQuizResult
+from .models import Quiz, Question, Option, UserQuizResult, Quotes
+
+
+@admin.register(Quotes)
+class QouteAdmin(admin.ModelAdmin):
+    list_display = ('id', 'quote_title', 'qoute_desc',
+                    'created_by', 'qoute_id')
 
 
 @admin.register(Quiz)
 class QuizAdmin(admin.ModelAdmin):
     list_display = ('id', 'quiz_title', 'quiz_desc',
-                    'created_at', 'updated_at')
-    search_fields = ('quiz_title', 'quiz_desc')
+                    'quiz_id')
 
 
 @admin.register(Question)

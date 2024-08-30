@@ -68,6 +68,7 @@ class UserView(APIView):
                 "last_name": user.last_name,
                 "email": user.email,
                 "token": token.key,
+                # "country": user.profile.country,
                 "role": role,
             }, status=status.HTTP_200_OK)
         else:

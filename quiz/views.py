@@ -15,6 +15,21 @@ from rest_framework.permissions import IsAuthenticated
 class QuotesView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def patch(self, request, id):
+        qoute = get_object_or_404(Quotes, id=id)
+        serializer = QuotesSerializer(qoute, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()  # Save the updated data to the database
+            return Response({"quote": serializer.data}, status=status.HTTP_200_OK)
+
+        return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, id):
+        qoute = get_object_or_404(Quotes, id=id)
+        qoute.delete()
+        return Response({"message": "Deleted."}, status=status.HTTP_204_NO_CONTENT)
+
     def post(self, request):
         if not request.user.is_staff:
             return Response({"error": "You do not have permission to access this resource."}, status=status.HTTP_403_FORBIDDEN)
@@ -51,6 +66,21 @@ class QuizCreateView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    def patch(self, request, id):
+        quiz = get_object_or_404(Quiz, id=id)
+        serializer = QuizSerializer(quiz, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"quiz": serializer.data}, status=status.HTTP_200_OK)
+
+        return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, id):
+        quiz = get_object_or_404(Quiz, id=id)
+        quiz.delete()
+        return Response({"message": "Deleted."}, status=status.HTTP_204_NO_CONTENT)
+
     def post(self, request):
         if not request.user.is_staff:
             return Response({"error": "You do not have permission to access this resource."}, status=status.HTTP_403_FORBIDDEN)
@@ -61,17 +91,17 @@ class QuizCreateView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def get(self, request, pk=None):
+    def get(self, request, id=None):
         if not request.user.is_staff:
             return Response({"error": "You do not have permission to access this resource."}, status=status.HTTP_403_FORBIDDEN)
 
-        if pk is None:
+        if id is None:
             quizzes = Quiz.objects.all()
             serializer = QuizSerializer(quizzes, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             try:
-                quiz = Quiz.objects.get(pk=pk)
+                quiz = Quiz.objects.get(pk=id)
             except Quiz.DoesNotExist:
                 return Response({"error": "Quiz not found."}, status=status.HTTP_404_NOT_FOUND)
 
