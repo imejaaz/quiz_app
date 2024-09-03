@@ -3,15 +3,14 @@ from .models import Quiz, Question, Option, UserQuizResult, Quotes
 
 
 @admin.register(Quotes)
-class QouteAdmin(admin.ModelAdmin):
-    list_display = ('id', 'quote_title', 'qoute_desc',
-                    'created_by', 'qoute_id')
+class QuoteAdmin(admin.ModelAdmin):
+    list_display = ('id', 'quote_title', 'quote_desc',
+                    'created_by')
 
 
 @admin.register(Quiz)
 class QuizAdmin(admin.ModelAdmin):
-    list_display = ('id', 'quiz_title', 'quiz_desc',
-                    'quiz_id')
+    list_display = ('id', 'quiz_title', 'quiz_desc')
 
 
 @admin.register(Question)

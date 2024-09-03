@@ -1,26 +1,28 @@
 from django.db import models
 from django.contrib.auth.models import User
 from .utility import generate_random_id
+from django.conf import settings
 
 
 class Quotes(models.Model):
     quote_title = models.CharField(max_length=50, null=True, blank=True)
-    qoute_desc = models.CharField(max_length=255)
+    quote_desc = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
-    qoute_id = models.CharField(
-        max_length=5, unique=True, default=generate_random_id)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    id = models.CharField(max_length=8, primary_key=True,
+                          default=generate_random_id)
 
     def __str__(self) -> str:
-        return self.quote_title
+        return self.quote_desc
 
     def save(self, *args, **kwargs):
-        if not self.qoute_id or Quotes.objects.filter(qoute_id=self.qoute_id).exists():
-            self.qoute_id = generate_random_id().lower()
-
-            while Quotes.objects.filter(qoute_id=self.qoute_id).exists():
-                self.qoute_id = generate_random_id().lower()
+        # Only generate a new id if it's a new instance (i.e., not yet saved)
+        if not self.id or not Quotes.objects.filter(id=self.id).exists():
+            self.id = generate_random_id().lower()
+            while Quotes.objects.filter(id=self.id).exists():
+                self.id = generate_random_id().lower()
 
         super().save(*args, **kwargs)
 
@@ -31,19 +33,19 @@ class Quiz(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     assigned_users = models.ManyToManyField(
-        User, related_name='assigned_quiz', blank=True)
-    quiz_id = models.CharField(
-        max_length=5, unique=True, default=generate_random_id)
+        settings.AUTH_USER_MODEL, related_name='assigned_quiz', blank=True)
+    id = models.CharField(max_length=8, primary_key=True,
+                          default=generate_random_id)
 
     def __str__(self):
         return self.quiz_title
 
     def save(self, *args, **kwargs):
-        if not self.quiz_id or Quiz.objects.filter(quiz_id=self.quiz_id).exists():
-            self.quiz_id = generate_random_id().lower()
+        if not self.id or not Quiz.objects.filter(id=self.id).exists():
+            self.id = generate_random_id().lower()
 
-            while Quiz.objects.filter(quiz_id=self.quiz_id).exists():
-                self.quiz_id = generate_random_id().lower()
+            while Quiz.objects.filter(id=self.id).exists():
+                self.id = generate_random_id().lower()
 
         super().save(*args, **kwargs)
 
@@ -68,7 +70,8 @@ class Option(models.Model):
 
 
 class UserQuizResult(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+                             on_delete=models.CASCADE)
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE)
     score = models.FloatField()
     created_at = models.DateTimeField(auto_now_add=True)

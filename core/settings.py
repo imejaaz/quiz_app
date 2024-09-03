@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'quiz',
     'account',
     'rest_framework.authtoken',
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [
@@ -143,3 +144,6 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     # 'https://example.com',
 ]
+
+# settings.py
+AUTH_USER_MODEL = 'account.User'

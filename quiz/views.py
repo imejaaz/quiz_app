@@ -12,15 +12,17 @@ from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 import random
-from account.models import Profile
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class QuotesView(APIView):
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, id):
-        qoute = get_object_or_404(Quotes, id=id)
-        serializer = QuotesSerializer(qoute, data=request.data, partial=True)
+        quote = get_object_or_404(Quotes, id=id)
+        serializer = QuotesSerializer(quote, data=request.data, partial=True)
 
         if serializer.is_valid():
             serializer.save()  # Save the updated data to the database
@@ -29,23 +31,24 @@ class QuotesView(APIView):
         return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, id):
-        qoute = get_object_or_404(Quotes, id=id)
-        qoute.delete()
+        quote = get_object_or_404(Quotes, id=id)
+        quote.delete()
         return Response({"message": "Deleted."}, status=status.HTTP_204_NO_CONTENT)
 
     def post(self, request):
         if not request.user.is_staff:
             return Response({"error": "You do not have permission to access this resource."}, status=status.HTTP_403_FORBIDDEN)
 
-        quote_title = request.data.get('quote_title')
+        # quote_title = request.data.get('quote_title')
         quote_desc = request.data.get('quote_desc')
 
-        if not all([quote_title, quote_desc]):
-            return Response({"error": "Both title and description are required."}, status=status.HTTP_400_BAD_REQUEST)
+        if not quote_desc:
+            # if not all([quote_title, quote_desc]):
+            return Response({"error": "Quotes description is required."}, status=status.HTTP_400_BAD_REQUEST)
 
         quote = Quotes(
-            quote_title=quote_title,
-            qoute_desc=quote_desc,
+            # quote_title=quote_title,
+            quote_desc=quote_desc,
             created_by=request.user
         )
         quote.save()
@@ -193,8 +196,8 @@ def SubmitQuizResultView(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def random_quote(request):
-    profile = get_object_or_404(Profile, user=request.user)
-    admin_user = profile.created_by
+    user = get_object_or_404(User, user=request.user)
+    admin_user = user.created_by
 
     if admin_user is None:
         return JsonResponse({"error": "Admin user not found."}, status=404)
@@ -203,9 +206,9 @@ def random_quote(request):
         return JsonResponse({"error": "No quotes available from the admin."}, status=404)
     quote = random.choice(all_quotes)
     quote_data = {
-        "id": quote.qoute_id,
-        "quote_title": quote.quote_title,
-        "quote_desc": quote.qoute_desc,
+        "id": quote.id,
+        # "quote_title": quote.quote_title,
+        "quote_desc": quote.quote_desc,
         "created_by": quote.created_by.username
     }
     return JsonResponse({"quote": quote_data})

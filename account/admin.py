@@ -1,8 +1,17 @@
 from django.contrib import admin
 
-from .models import Profile
+from django.contrib import admin
+from .models import User
 
 
-@admin.register(Profile)
-class ProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'country')
+from .models import User
+
+
+class UserAdmin(admin.ModelAdmin):
+    list_display = (
+        'id', 'email', 'first_name', 'last_name', 'is_active',
+        'is_staff', 'is_superuser', 'country', 'created_by', 'role'
+    )
+
+
+admin.site.register(User, UserAdmin)

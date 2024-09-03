@@ -1,7 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.contrib.auth import update_session_auth_hash
 from rest_framework.decorators import api_view, permission_classes
-from django.contrib.auth.models import User
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -9,13 +8,19 @@ from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
+from django.shortcuts import get_object_or_404
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class SignUpView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        if not request.user.is_superuser and not request.user.is_staff:
+        print(request.user.role)
+
+        if request.user.role == 'user':
             return Response({"error": "You have not permissions to access it."}, status=status.HTTP_400_BAD_REQUEST)
         f_name = request.data.get('first_name')
         l_name = request.data.get('last_name')
@@ -32,17 +37,13 @@ class SignUpView(APIView):
             first_name=f_name,
             last_name=l_name,
             email=email,
-            username=email,
+            role='user',
             password=password
         )
         if request.user.is_superuser:
             user.is_staff = True
+            user.role = 'admin'
         user.save()
-
-        profile = user.profile
-        profile.created_by = request.user
-        profile.save()
-
         return Response({
             "success": "User created successfully.",
         }, status=status.HTTP_201_CREATED)
@@ -63,7 +64,7 @@ class UserView(APIView):
             token, created = Token.objects.get_or_create(user=user)
             if user.is_superuser:
                 role = "superuser"
-            elif user.is_staff:
+            elif user.role == 'admin':
                 role = "admin"
             else:
                 role = "user"
@@ -72,7 +73,7 @@ class UserView(APIView):
                 "last_name": user.last_name,
                 "email": user.email,
                 "token": token.key,
-                # "country": user.profile.country,
+                "country": user.country,
                 "role": role,
             }, status=status.HTTP_200_OK)
         else:
@@ -84,13 +85,14 @@ class UserView(APIView):
             raise PermissionDenied(
                 "You are not authenticated.")
 
-        if not request.user.is_staff:
+        if request.user.role == "user":
             return Response({"error": "You do not have permission to access this resource."}, status=status.HTTP_403_FORBIDDEN)
 
         users = User.objects.filter(
             is_active=True, is_staff=False, is_superuser=False)
         user_data = [
             {
+                "id": user.id,
                 "first_name": user.first_name,
                 "last_name": user.last_name,
                 "email": user.email
@@ -99,6 +101,17 @@ class UserView(APIView):
         ]
 
         return Response({"users": user_data}, status=status.HTTP_200_OK)
+
+    def delete(self, request, pk):
+        if not request.user.is_authenticated:
+            return Response({"error": "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        if request.user.role == 'user':
+            return Response({"error": "You do not have permission to access this resource."}, status=status.HTTP_403_FORBIDDEN)
+
+        user = get_object_or_404(User, id=pk)
+        user.delete()
+        return Response({"message": "User deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['POST'])
@@ -116,8 +129,8 @@ def UpdateProfileView(request):
     if last_name is not None:
         user.last_name = last_name
     if country is not None:
-        user.profile.country = country
-        user.profile.save()
+        user.country = country
+        user.save()
 
     if old_password and new_password:
         if not user.check_password(old_password):
