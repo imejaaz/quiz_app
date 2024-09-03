@@ -59,7 +59,7 @@ class QuotesView(APIView):
         }, status=status.HTTP_201_CREATED)
 
     def get(self, request):
-        if not request.user.is_staff:
+        if not request.user.role == 'admin':
             return Response({"error": "You do not have permission to access this resource."}, status=status.HTTP_403_FORBIDDEN)
 
         quotes = Quotes.objects.filter(created_by=request.user)
@@ -196,9 +196,9 @@ def SubmitQuizResultView(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def random_quote(request):
-    user = get_object_or_404(User, user=request.user)
-    admin_user = user.created_by
 
+    user = get_object_or_404(User, id=request.user.id)
+    admin_user = user.created_by
     if admin_user is None:
         return JsonResponse({"error": "Admin user not found."}, status=404)
     all_quotes = Quotes.objects.filter(created_by=admin_user)
@@ -209,6 +209,6 @@ def random_quote(request):
         "id": quote.id,
         # "quote_title": quote.quote_title,
         "quote_desc": quote.quote_desc,
-        "created_by": quote.created_by.username
+        "created_by": quote.created_by.first_name
     }
     return JsonResponse({"quote": quote_data})

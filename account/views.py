@@ -38,7 +38,8 @@ class SignUpView(APIView):
             last_name=l_name,
             email=email,
             role='user',
-            password=password
+            password=password,
+            created_by=request.user
         )
         if request.user.is_superuser:
             user.is_staff = True
